@@ -3,6 +3,8 @@
         // Agar pehle se chal raha hai toh purana button uda do taaki naya lag sake
         const oldBtn = document.getElementById('turbo-toast-controller');
         if (oldBtn) oldBtn.remove();
+        const oldSysBtn = document.getElementById('turbo-system-online-controller');
+        if (oldSysBtn) oldSysBtn.remove();
     }
     window.turboV35_Parallel = true;
    
@@ -27,8 +29,9 @@
     window.packedTotal = window.packedTotal || 0;
     window.openedTotal = window.openedTotal || 0;
 
-    // Strict Global Flag for Toast Control
+    // Strict Global Flags
     window.isToastStrictlyEnabled = true;
+    window.isSystemOnlineStrictlyEnabled = true; // New Flag for Mic/Voice Control
 
     function getMappedName(id) {
         if (!id || id === '-' || id === ' ') return "Unassigned";
@@ -179,7 +182,6 @@
     }
 
     function showToast(cid, rankNum, totalQty) {
-        // HARD STOP CHECK: Agar switch off hai to function yahi band ho jaye
         if (window.isToastStrictlyEnabled === false) {
             console.log(`Blocked Toast via hard-stop: ${cid}`);
             return;
@@ -224,7 +226,7 @@
     let isSystemActive = false;
 
     function speak(text) {
-        if (window.isToastStrictlyEnabled === false) return; // Voice safety block
+        if (window.isToastStrictlyEnabled === false) return; 
         window.speechSynthesis.cancel();
         const msg = new SpeechSynthesisUtterance(text);
         msg.lang = 'hi-IN';
@@ -239,6 +241,11 @@
         recognition.lang = 'en-US';
 
         recognition.onresult = (event) => {
+            // Hard Stop check for System Online / Microphone recognition
+            if (window.isSystemOnlineStrictlyEnabled === false) {
+                return;
+            }
+
             let voiceText = event.results[0][0].transcript.toLowerCase().trim();
            
             if (isSimilar(voiceText, "system online") || isSimilar(voiceText, "online")) {
@@ -336,7 +343,6 @@
 
         const sortedStats = Object.entries(stats).sort((a,b) => b[1] - a[1]);
         
-        // LOOP TOAST FIRE CONDITION (Strict check inside the logic loop)
         if (currentGlobalTotal > lastGlobalTotal && lastGlobalTotal !== 0) {
             sortedStats.forEach(([cid, pQty], i) => {
                 if (historyQty[cid] !== undefined && pQty > historyQty[cid]) {
@@ -485,7 +491,7 @@
     };
 
     // -----------------------------------------------------
-    // FLOATING UI TOGGLE BUTTON DIRECT INTEGRATION
+    // FLOATING UI TOGGLE BUTTON DIRECT INTEGRATION (TOAST)
     // -----------------------------------------------------
     const uiBtn = document.createElement('button');
     uiBtn.id = 'turbo-toast-controller';
@@ -527,6 +533,55 @@
     };
 
     document.body.appendChild(uiBtn);
+
+    // -----------------------------------------------------
+    // SYSTEM ONLINE / MIC CONTROLLER BUTTON INTEGRATION
+    // -----------------------------------------------------
+    const sysBtn = document.createElement('button');
+    sysBtn.id = 'turbo-system-online-controller';
+    sysBtn.innerHTML = '🎙️ MIC: ON';
+    
+    sysBtn.style.position = 'fixed';
+    sysBtn.style.bottom = '80px'; // Placed slightly above the Toast button
+    sysBtn.style.right = '20px';
+    sysBtn.style.zIndex = '2147483647';
+    sysBtn.style.padding = '10px 20px';
+    sysBtn.style.fontSize = '12px';
+    sysBtn.style.fontWeight = 'bold';
+    sysBtn.style.fontFamily = "'Inter', sans-serif";
+    sysBtn.style.color = '#ffffff';
+    sysBtn.style.backgroundColor = '#10b981'; // Green for ON
+    sysBtn.style.border = 'none';
+    sysBtn.style.borderRadius = '30px';
+    sysBtn.style.cursor = 'pointer';
+    sysBtn.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)';
+    sysBtn.style.transition = 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+    sysBtn.onmouseover = () => sysBtn.style.transform = 'scale(1.08)';
+    sysBtn.onmouseout = () => sysBtn.style.transform = 'scale(1)';
+
+    sysBtn.onclick = function() {
+        if (window.isSystemOnlineStrictlyEnabled) {
+            window.isSystemOnlineStrictlyEnabled = false;
+            sysBtn.innerHTML = '🔇 MIC: OFF';
+            sysBtn.style.backgroundColor = '#ef4444'; // Red for OFF
+            sysBtn.style.boxShadow = '0 6px 20px rgba(239,68,68,0.4)';
+            filterInput.placeholder = "Mic Stopped (System Offline Disabled)";
+            if(filterInput.classList.contains('voice-active')){
+                filterInput.classList.replace('voice-active', 'voice-standby');
+            }
+            console.log("🔴 System Online Voice Command MUTED.");
+        } else {
+            window.isSystemOnlineStrictlyEnabled = true;
+            sysBtn.innerHTML = '🎙️ MIC: ON';
+            sysBtn.style.backgroundColor = '#10b981'; // Green for ON
+            sysBtn.style.boxShadow = '0 6px 20px rgba(16,185,129,0.4)';
+            filterInput.placeholder = "Say 'System Online'...";
+            console.log("🟢 System Online Voice Command UNMUTED.");
+        }
+    };
+
+    document.body.appendChild(sysBtn);
     // -----------------------------------------------------
 
     (async function engine() {
