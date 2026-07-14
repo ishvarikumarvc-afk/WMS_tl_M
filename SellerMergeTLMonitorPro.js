@@ -420,6 +420,9 @@
     document.getElementById('theme-toggle').onclick = () => app.classList.toggle('dark-version');
     const getElementByXpath = (doc, path) => doc.evaluate(path, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 
+    // -----------------------------------------------------
+    // DYNAMIC HEADER MAPPING FUNCTION (UPDATED SECTION)
+    // -----------------------------------------------------
     async function fetchDataFromWorker(workerIdx, id) {
         const ifr = document.getElementById(`worker-${workerIdx}`);
         const doc = ifr.contentWindow.document;
@@ -436,10 +439,51 @@
             const btn = doc.querySelector('.hunkdo') || doc.querySelector('[class*="SearchText"]');
             if (btn) btn.click();
             await new Promise(r => setTimeout(r, 1600));
+
+            // Sabse pehle table ke headers fetch karke unki matching mapping taiyar karein
+            const headers = Array.from(doc.querySelectorAll('table thead th, table tr th')).map(th => th.innerText.trim().toLowerCase());
+            
+            // Defaut safety indexes set karein
+            let qtyIdx = 3;
+            let pickedQtyIdx = 4;
+            let statusIdx = 9;
+            let casperIdx = 10;
+            let pickzoneIdx = 12;
+
+            if (headers.length > 0) {
+                // Qty ya Pickable Qty ya Total Items me se jo bhi mile usko dynamically map karein
+                const foundQty = headers.findIndex(h => h.includes('qty') && !h.includes('picked'));
+                const foundPickable = headers.findIndex(h => h.includes('pickable qty') || h.includes('total items'));
+                if (foundQty !== -1) qtyIdx = foundQty;
+                else if (foundPickable !== -1) qtyIdx = foundPickable;
+
+                // Picked Qty index mapping
+                const foundPicked = headers.findIndex(h => h.includes('picked qty'));
+                if (foundPicked !== -1) pickedQtyIdx = foundPicked;
+
+                // Status index mapping
+                const foundStatus = headers.findIndex(h => h.includes('status'));
+                if (foundStatus !== -1) statusIdx = foundStatus;
+
+                // Casper ID index mapping
+                const foundCasper = headers.findIndex(h => h.includes('casper id'));
+                if (foundCasper !== -1) casperIdx = foundCasper;
+
+                // Pickzone index mapping
+                const foundPickzone = headers.findIndex(h => h.includes('pickzone'));
+                if (foundPickzone !== -1) pickzoneIdx = foundPickzone;
+            }
+
             const row = Array.from(doc.querySelectorAll('tr')).find(r => r.innerText.includes(id));
             if (row) {
                 const td = row.querySelectorAll('td');
-                return { q: td[3]?.innerText.trim() || '0', pq: td[6]?.innerText.trim() || '0', s: td[9]?.innerText.trim() || 'WAIT', ci: td[10]?.innerText.trim() || '-', pz: td[12]?.innerText.trim() || '-' };
+                return { 
+                    q: td[qtyIdx]?.innerText.trim() || '0', 
+                    pq: td[pickedQtyIdx]?.innerText.trim() || '0', 
+                    s: td[statusIdx]?.innerText.trim() || 'WAIT', 
+                    ci: td[casperIdx]?.innerText.trim() || '-', 
+                    pz: td[pickzoneIdx]?.innerText.trim() || '-' 
+                };
             }
         } catch(e) {} return null;
     }
