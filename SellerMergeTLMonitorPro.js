@@ -439,7 +439,7 @@
             const row = Array.from(doc.querySelectorAll('tr')).find(r => r.innerText.includes(id));
             if (row) {
                 const td = row.querySelectorAll('td');
-                return { q: td[3]?.innerText.trim() || '0', pq: td[4]?.innerText.trim() || '0', s: td[9]?.innerText.trim() || 'WAIT', ci: td[10]?.innerText.trim() || '-', pz: td[12]?.innerText.trim() || '-' };
+                return { q: td[3]?.innerText.trim() || '0', pq: td[6]?.innerText.trim() || '0', s: td[9]?.innerText.trim() || 'WAIT', ci: td[10]?.innerText.trim() || '-', pz: td[12]?.innerText.trim() || '-' };
             }
         } catch(e) {} return null;
     }
